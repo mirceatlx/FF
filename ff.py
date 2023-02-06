@@ -20,7 +20,7 @@ class FFLayer(nn.Module):
        self.epochs = epochs
 
        self.linear = nn.Linear(in_dims, out_dims) 
-       self.optim = optimizer(self) # does this work?
+       self.optim = optimizer(self.parameters()) # does this work?
 
 
     def forward(self, x: torch.Tensor):
@@ -84,7 +84,7 @@ class FF(nn.Module):
                                   optimizer))
 
 
-   def forward(self, x_pos, x_neg):
+    def forward(self, x_pos, x_neg):
 
        losses = []
        for i, layer in enumerate(self.layers):
