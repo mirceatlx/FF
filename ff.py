@@ -83,9 +83,6 @@ class FF(nn.Module):
                                   config["threshold"], config["epochs"], 
                                   optimizer))
 
-        self.net = nn.Sequential(*layers)
-
-
 
    def forward(self, x_pos, x_neg):
 
