@@ -21,27 +21,47 @@ class CIFAR10:
 
     @staticmethod
     def predict(data_loader: torch.utils.data.DataLoader, model: nn.Module):
-
         model.eval()
+        predictions = []
+        real = []
         for i, (x, y) in enumerate(data_loader):
+            goodness = []
             for num in range(10):
-                over_x = CIFAR10.overlay_y_on_x(x, y)
-                out = model(over_x)
-                print(out.shape)
-                # TODO: finish 
+                over_x = CIFAR10.overlay_y_on_x(x, num)
+                good = model(over_x[0])
+                goodness.append(good.detach().numpy())
+            goodness = np.array(goodness).T
+            predictions.extend(np.argmax(goodness,axis = 1))
+            real.extend(list(y.detach().numpy()))
+        return np.array(predictions), np.array(real)
 
 
 
 class MNIST:
 
-     @staticmethod
-     def overlay_y_on_x(x: torch.Tensor, y: torch.Tensor):
-
+    @staticmethod
+    def overlay_y_on_x(x: torch.Tensor, y: torch.Tensor):
         _data = x.clone()
         _data = _data.view(-1, _data.numel() // _data.shape[0]) # flatten the image
         overlay = torch.zeros(_data.shape[0], 10)
         overlay[range(_data.shape[0]), y] = x.max()
         _data[:, :10] = overlay 
         return _data, y
-
-
+    
+    @staticmethod
+    def predict(data_loader: torch.utils.data.DataLoader, model: nn.Module):
+        model.eval()
+        predictions = []
+        real = []
+        for i, (x, y) in enumerate(data_loader):
+            goodness = []
+            for num in range(10):
+                over_x = MNIST.overlay_y_on_x(x, num)
+                good = model(over_x[0])
+                goodness.append(good.detach().numpy())
+            
+            goodness = np.array(goodness).T
+            predictions.extend(np.argmax(goodness,axis = 1))
+            real.extend(list(y.detach().numpy()))
+        return np.array(predictions), np.array(real)
+        
