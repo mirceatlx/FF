@@ -59,9 +59,23 @@ class MNIST:
                 over_x = MNIST.overlay_y_on_x(x, num)
                 good = model(over_x[0])
                 goodness.append(good.detach().numpy())
+<<<<<<< HEAD
             
             goodness = np.array(goodness).T
             predictions.extend(np.argmax(goodness,axis = 1))
             real.extend(list(y.detach().numpy()))
         return np.array(predictions), np.array(real)
         
+=======
+            predictions.extend(list(np.argmax(goodness,axis=0)))
+            real.extend(list(y.detach().numpy()))
+        return np.sum(np.array(predictions) == np.array(real)) / len(real)
+
+
+
+
+
+
+        
+
+>>>>>>> 897dd16 (actually added the code)
