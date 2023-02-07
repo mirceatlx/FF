@@ -97,6 +97,5 @@ class FF(nn.Module):
        for i, layer in enumerate(self.layers):
            x = layer(x)
            goodness += layer.goodness(x)
-
        return goodness
 
