@@ -56,6 +56,7 @@ if __name__ == "__main__":
     "learning_rate": 0.005,
     "layer_epochs": 50,
     "epochs": epochs,
+    "seed": seed,
     "batch_size": batch_size_train,
     "activation": "relu",
     "positive_lr": 0.005,

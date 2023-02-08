@@ -38,8 +38,8 @@ class FFLayer(nn.Module):
 
         # normalization: keep the direction, remove any trace of goodness from the last layer
         x_norm = torch.linalg.norm(x, ord=2, dim=1, keepdims=True) 
-        x_norm = x_norm + 1e-4
-        x_dir = x / x_norm
+        x_norm = torch.add(x_norm, 1e-4)
+        x_dir = torch.div(x, x_norm)
 
         return self.activation(self.layer(x_dir))
 
@@ -51,7 +51,7 @@ class FFLayer(nn.Module):
         for i in range(self.epochs):
             self.optim_pos.zero_grad()
             pos_good = self.goodness(self.call(x_pos))
-            loss = torch.log(1 + torch.exp(-pos_good + self.threshold)).mean()
+            loss = torch.log(torch.add(1, torch.exp(torch.add(-pos_good, self.threshold)))).mean()
             losses.append(loss.item())
             loss.backward()
             self.optim_pos.step()
@@ -69,7 +69,7 @@ class FFLayer(nn.Module):
         for i in range(self.epochs):
             self.optim_neg.zero_grad()
             neg_good = self.goodness(self.call(x_neg))
-            loss = torch.log(1 + torch.exp(neg_good - self.threshold)).mean()
+            loss = torch.log(torch.add(1, torch.exp(torch.add(neg_good,  -self.threshold)))).mean()
             losses.append(loss.item())
             loss.backward()
             self.optim_neg.step()
@@ -87,8 +87,8 @@ class FFLayer(nn.Module):
             self.optim.zero_grad()
             pos_good = self.goodness(self.call(x_pos))
             neg_good = self.goodness(self.call(x_neg))
-            loss = torch.log(1 + torch.exp(
-                torch.cat([-pos_good + self.threshold, neg_good - self.threshold]))).mean()
+            loss = torch.log(torch.add(1, torch.exp(
+                torch.cat([torch.add(-pos_good, self.threshold), torch.add(neg_good, -self.threshold)])))).mean()
             losses.append(loss.item())
             loss.backward()
             self.optim.step()
