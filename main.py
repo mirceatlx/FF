@@ -13,8 +13,14 @@ from tqdm import tqdm
 if __name__ == "__main__":
   device = "cuda" if torch.cuda.is_available() else "cpu"
 
-  batch_size_train = 256
-  batch_size_test = 256
+  seed = 42
+  torch.manual_seed(seed)
+  torch.cuda.manual_seed(seed)
+  torch.backends.cudnn.deterministic = True
+  np.random.seed(seed)
+
+  batch_size_train = 512
+  batch_size_test = 512
   print("Loading datasets:")
   train_loader = torch.utils.data.DataLoader(
   torchvision.datasets.MNIST('./datasets/MNIST/', train=True, download=True,
@@ -38,11 +44,11 @@ if __name__ == "__main__":
   epochs = 50
   model = FF(logging=True, device=device)
   model.add_layer(FFLayer(nn.Linear(784, 500), optimizer=torch.optim.Adam, epochs=epochs,
-         threshold=threshold, activation=nn.ReLU(), lr=0.005, positive_lr=0.005, negative_lr=0.005, logging=True, name="layer 1"))
+         threshold=threshold, activation=nn.ReLU(), lr=0.001, positive_lr=0.005, negative_lr=0.005, logging=True, name="layer 1"))
   model.add_layer(FFLayer(nn.Linear(500, 500), optimizer=torch.optim.Adam, epochs=epochs,
-         threshold=threshold, activation=nn.ReLU(), lr=0.005, positive_lr=0.005, negative_lr=0.005, logging=True, name="layer 2"))
+         threshold=threshold, activation=nn.ReLU(), lr=0.001, positive_lr=0.005, negative_lr=0.005, logging=True, name="layer 2"))
   model.add_layer(FFLayer(nn.Linear(500, 500), optimizer=torch.optim.Adam, epochs=epochs,
-         threshold=threshold, activation=nn.ReLU(), lr=0.005, positive_lr=0.005, negative_lr=0.005, logging=True, name="layer 3"))
+         threshold=threshold, activation=nn.ReLU(), lr=0.001, positive_lr=0.005, negative_lr=0.005, logging=True, name="layer 3"))
 
   epochs = 300
   wandb.init(project="MNIST", entity="ffalgo")
@@ -60,7 +66,6 @@ if __name__ == "__main__":
   }
 
   model = model.to(device)
-  print(model.layers[0].layer.weight.device)
   best_acc = 0.0
   print("Start training")
   for i in tqdm(range(epochs)):
@@ -85,6 +90,4 @@ if __name__ == "__main__":
           
   wandb.finish()
   print(f"Finished training")
-
-
 
