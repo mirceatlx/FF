@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+import wandb
 
 # reference: https://keras.io/examples/vision/forwardforward/
 class FFLayer(nn.Module):
@@ -12,7 +13,8 @@ class FFLayer(nn.Module):
     """
     def __init__(self, layer: nn.Module, threshold: float=2.0, epochs: int=50, 
                  optimizer: torch.optim = torch.optim.Adam, activation: nn.Module = nn.ReLU(),
-                 lr: float = 0.01, positive_lr: float = None, negative_lr: float = None):
+                 lr: float = 0.01, positive_lr: float = None, negative_lr: float = None,
+                 logging=False, name="layer", device="cpu"):
         """
         layer: the layer to be wrapped
         threshold: the threshold for the goodness of the data
@@ -27,7 +29,8 @@ class FFLayer(nn.Module):
         self.optim = optimizer(self.parameters(), lr=lr)
         self.optim_pos = optimizer(self.parameters(), lr=lr if positive_lr is None else positive_lr)
         self.optim_neg = optimizer(self.parameters(), lr=lr if negative_lr is None else negative_lr)
-
+        self.logging = logging
+        self.name = name
         # loading the activation function
         self.activation = activation
 
@@ -54,6 +57,8 @@ class FFLayer(nn.Module):
             self.optim_pos.step()
         with torch.no_grad():
             h_pos = self.call(x_pos)
+        if self.logging:
+            wandb.log({f"positive data loss on {self.name}": np.mean(losses)})
         return h_pos, np.mean(losses)
 
     def forward_negative(self, x_neg: torch.Tensor):
@@ -70,6 +75,8 @@ class FFLayer(nn.Module):
             self.optim_neg.step()
         with torch.no_grad():
             h_neg = self.call(x_neg)
+        if self.logging:
+            wandb.log({f"negative data loss on {self.name}": np.mean(losses)})
         return h_neg, np.mean(losses)
 
     def forward(self, x_pos: torch.Tensor, x_neg: torch.Tensor = None):
@@ -90,6 +97,8 @@ class FFLayer(nn.Module):
         with torch.no_grad():
             h_pos = self.call(x_pos)
             h_neg = self.call(x_neg)
+        if self.logging:
+            wandb.log({f"loss on {self.name}": np.mean(losses)})
         return h_pos, h_neg, np.mean(losses)
 
     def goodness(self, x: torch.Tensor):
@@ -103,17 +112,19 @@ class FF(nn.Module):
     """
     The Forward-Forward algorithm.
     """
-    def __init__(self):
+    def __init__(self, logging=False, device="cpu"):
 
         super(FF, self).__init__()
         self.num_layers = 0
+        self.logging = logging
         self.layers = []
+        self.device = device
     
     """
     Add a layer to the network
     """
     def add_layer(self, layer: FFLayer):
-        self.layers.append(layer)
+        self.layers.append(layer.to(self.device))
         self.num_layers += 1
 
     """
@@ -147,6 +158,8 @@ class FF(nn.Module):
         for _, layer in enumerate(self.layers):
             x_pos, x_neg, loss = layer(x_pos, x_neg)
             losses.append(loss)
+        if self.logging:
+            wandb.log({"overall loss": np.mean(losses)})
         return np.mean(losses)
 
     """
@@ -156,7 +169,7 @@ class FF(nn.Module):
        """
        Calculate the total goodness of the network for some data (positive/negative)
        """
-       goodness = torch.zeros(x.shape[0])
+       goodness = torch.zeros(x.shape[0]).to(self.device)
        for i, layer in enumerate(self.layers):
            x = layer(x)
            goodness += layer.goodness(x)
