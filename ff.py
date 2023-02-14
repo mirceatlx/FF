@@ -175,3 +175,62 @@ class FF(nn.Module):
            goodness += layer.goodness(x)
        return goodness
 
+class LinearSoftmax(nn.Module):
+
+
+    def __init__(self, in_features: int, out_features: int, loss_fn=nn.NLLLoss, name="layer"):
+        self.in_features = in_features
+        self.out_features = out_features
+        self.loss_fn = loss_fn()
+        self.linear = nn.Linear(in_features, out_features)
+        self.soft = nn.Softmax(dim=1)
+        super(LinearSoftmax, self).__init__()
+
+    def forward(self, x: torch.Tensor):
+        x_norm = torch.linalg.norm(x, ord=2, dim=1, keepdims=True) 
+        x_norm = torch.add(x_norm, 1e-4)
+        x = torch.div(x, x_norm)
+        return self.soft(self.linear(x))
+
+class FFNLP(nn.Module):
+
+
+    def __init__(self, input_tokens: int, vocab_size: int, n_layers: int, epochs: int):
+
+        super(FFNLP, self).__init__()
+        self.input_tokens = input_tokens
+        self.vocab_size = vocab_size
+        self.n_layers = n_layers
+        self.epochs = epochs
+        self.token2emb = FFLayer(nn.Linear, name="token2emb")
+        layers = []
+        for i in range(n_layers):
+            layers.append(FFLayer(nn.Linear, name=f"layer {i}"))
+        self.layers = nn.ModuleList(layers)
+        self.emb2token = FFLayer(layer=nn.Linear, activation=nn.Sigmoid)
+        self.emb2token = LinearSoftmax(self.n_layers * hidden_size, vocab_size, name="emb2token")
+
+    def forward(self, x):
+        x = self.token2emb(x)
+        activations = []
+        for layer in self.layers:
+            x = layer(x)
+            activations.append(x)
+
+        x = torch.cat(activations, dim=1)
+        x = self.emb2token(x)
+        return x
+
+    def train(x: torch.Tensor, prev: torch.Tensor, labels: torch.Tensor, theta: float):
+
+        h_pos, h_neg, loss = self.token2emb(x, prev)
+        predictions = []
+        for layer in self.layers:
+            h_pos, h_neg, loss = layer(h_pos, h_neg)
+            predictions.append(torch.cat([h_pos, h_neg], dim=0)) 
+
+        predictions = torch.Tensor(predictions)
+        x = torch.cat(predictions, dim=1)
+        for i in range(self.epochs):
+            x = self.emb2token(x)
+        h_pos, h_neg, loss = self.emb2token(x)
