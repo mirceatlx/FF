@@ -13,7 +13,7 @@ class FFLayer(nn.Module):
     """
     def __init__(self, layer: nn.Module, threshold: float=2.0, epochs: int=50, 
                  optimizer: torch.optim = torch.optim.Adam, activation: nn.Module = nn.ReLU(),
-                 lr: float = 0.01, positive_lr: float = None, negative_lr: float = None,
+                 optim_config: dict = None, positive_optim_config: dict = None, negative_optim_config: dict = None,
                  logging=False, name="layer", device="cpu"):
         """
         layer: the layer to be wrapped
@@ -26,9 +26,9 @@ class FFLayer(nn.Module):
         self.threshold = threshold
         self.epochs = epochs
         self.layer = layer
-        self.optim = optimizer(self.parameters(), lr=lr)
-        self.optim_pos = optimizer(self.parameters(), lr=lr if positive_lr is None else positive_lr)
-        self.optim_neg = optimizer(self.parameters(), lr=lr if negative_lr is None else negative_lr)
+        self.optim = optimizer(self.parameters(), **optim_config)
+        self.optim_pos = optimizer(self.parameters(), **(positive_optim_config if positive_optim_config is not None else optim_config))
+        self.optim_neg = optimizer(self.parameters(), **(negative_optim_config if negative_optim_config is not None else optim_config))
         self.logging = logging
         self.name = name
         # loading the activation function
