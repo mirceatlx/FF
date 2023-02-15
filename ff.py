@@ -14,7 +14,7 @@ class FFLayer(nn.Module):
     def __init__(self, layer: nn.Module, threshold: float=2.0, epochs: int=50, 
                  optimizer: torch.optim = torch.optim.Adam, activation: nn.Module = nn.ReLU(),
                  optim_config: dict = None, positive_optim_config: dict = None, negative_optim_config: dict = None,
-                 logging=False, name="layer", device="cpu"):
+                 logging=False, name="layer", device="cpu", goodness_function=lambda x: x.pow(2).mean(1)):
         """
         layer: the layer to be wrapped
         threshold: the threshold for the goodness of the data
@@ -31,6 +31,8 @@ class FFLayer(nn.Module):
         self.optim_neg = optimizer(self.parameters(), **(negative_optim_config if negative_optim_config is not None else optim_config))
         self.logging = logging
         self.name = name
+        self.device = device
+        self.goodness_function = goodness_function
         # loading the activation function
         self.activation = activation
 
@@ -50,7 +52,7 @@ class FFLayer(nn.Module):
         losses = []
         for i in range(self.epochs):
             self.optim_pos.zero_grad()
-            pos_good = self.goodness(self.call(x_pos))
+            pos_good = self.goodness_function(self.call(x_pos))
             loss = torch.log(torch.add(1, torch.exp(torch.add(-pos_good, self.threshold)))).mean()
             losses.append(loss.item())
             loss.backward()
@@ -68,7 +70,7 @@ class FFLayer(nn.Module):
         losses = []
         for i in range(self.epochs):
             self.optim_neg.zero_grad()
-            neg_good = self.goodness(self.call(x_neg))
+            neg_good = self.goodness_function(self.call(x_neg))
             loss = torch.log(torch.add(1, torch.exp(torch.add(neg_good,  -self.threshold)))).mean()
             losses.append(loss.item())
             loss.backward()
@@ -85,8 +87,8 @@ class FFLayer(nn.Module):
         losses = []
         for i in range(self.epochs):
             self.optim.zero_grad()
-            pos_good = self.goodness(self.call(x_pos))
-            neg_good = self.goodness(self.call(x_neg))
+            pos_good = self.goodness_function(self.call(x_pos))
+            neg_good = self.goodness_function(self.call(x_neg))
             loss = torch.log(torch.add(1, torch.exp(
                 torch.cat([torch.add(-pos_good, self.threshold), torch.add(neg_good, -self.threshold)])))).mean()
             losses.append(loss.item())
@@ -100,12 +102,6 @@ class FFLayer(nn.Module):
         if self.logging:
             wandb.log({f"loss on {self.name}": np.mean(losses)})
         return h_pos, h_neg, np.mean(losses)
-
-    def goodness(self, x: torch.Tensor):
-        """
-        Goodness of data as specified in the FF paper.
-        """
-        return x.pow(2).mean(1)
 
 
 class FF(nn.Module):
@@ -172,7 +168,7 @@ class FF(nn.Module):
        goodness = torch.zeros(x.shape[0]).to(self.device)
        for i, layer in enumerate(self.layers):
            x = layer(x)
-           goodness += layer.goodness(x)
+           goodness += layer.goodness_function(x)
        return goodness
 
 class LinearSoftmax(nn.Module):
