@@ -230,3 +230,76 @@ class FFNLP(nn.Module):
         for i in range(self.epochs):
             x = self.emb2token(x)
         h_pos, h_neg, loss = self.emb2token(x)
+
+
+class AE(torch.nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+         
+        # Building an linear encoder with Linear
+        # layer followed by Relu activation function
+        # 784 ==> 9
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Linear(input_size, hidden_size),
+            torch.nn.ReLU(),
+        )
+         
+        # Building an linear decoder with Linear
+        # layer followed by Relu activation function
+        # The Sigmoid activation function
+        # outputs the value between 0 and 1
+        # 9 ==> 784
+        self.decoder = torch.nn.Sequential(
+            torch.nn.Linear(hidden_size, output_size),
+            torch.nn.Sigmoid()
+        )
+ 
+    def forward(self, x):
+        if self.training:
+            x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
+class FFEncoder(nn.Module):
+
+    def __init__(self, fflayer: nn.Module, input_size, hidden_size, output_size, device="cpu"):
+
+        super(FFEncoder, self).__init__()
+        self.fflayer = fflayer
+        self.device = device
+        self.input_size = input_size
+
+        self.autoencoder = AE(input_size, hidden_size, output_size).to(device)
+        
+        self.autoencoder_loss_function = torch.nn.MSELoss()
+        self.optimizer = torch.optim.Adam(self.autoencoder.parameters(), lr = 0.0001, weight_decay=1e-8)   
+        self.hidden_size = hidden_size
+
+
+    def call(self, x: torch.Tensor):
+        return self.fflayer(x)
+
+    def forward_positive(self, x_pos: torch.Tensor):
+        self.autoencoder.eval()
+
+        x_neg = self.autoencoder(torch.rand((1,self.hidden_size)).to(self.device)).detach().to(self.device)
+        h_pos, _, loss = self.fflayer.forward(x_pos, x_neg)
+        return h_pos, loss
+
+
+    def forward_negative(self, x_neg: torch.Tensor):
+        self.autoencoder.train()
+        reconstructed = self.autoencoder(x_neg)
+        loss = self.autoencoder_loss_function(reconstructed, x_neg)
+       
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return self.fflayer.forward_negative(x_neg)
+
+    def forward(self, x_pos: torch.Tensor, x_neg: torch.Tensor = None):
+        return self.fflayer(x_pos, x_neg)
+
+    def goodness_function(self,x):
+        return self.fflayer.goodness_function(x)
