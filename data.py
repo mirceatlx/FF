@@ -47,7 +47,7 @@ class CIFAR10:
             goodness = []
             for num in range(10):
                 over_x = CIFAR10.overlay_y_on_x(x, num)
-                over_x = over_x[0].reshape((-1, 3, 32, 32))
+                over_x = over_x[0].reshape((-1, 3, 224, 224))
                 over_x = resnet(over_x.to(device))
                 over_x = over_x.to(device)
                 good = model(over_x)

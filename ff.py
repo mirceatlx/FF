@@ -236,22 +236,14 @@ class AE(torch.nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
          
-        # Building an linear encoder with Linear
-        # layer followed by Relu activation function
-        # 784 ==> 9
         self.encoder = torch.nn.Sequential(
             torch.nn.Linear(input_size, hidden_size),
             torch.nn.ReLU(),
         )
          
-        # Building an linear decoder with Linear
-        # layer followed by Relu activation function
-        # The Sigmoid activation function
-        # outputs the value between 0 and 1
-        # 9 ==> 784
         self.decoder = torch.nn.Sequential(
             torch.nn.Linear(hidden_size, output_size),
-            torch.nn.Sigmoid()
+            torch.nn.Tanh()
         )
  
     def forward(self, x):
@@ -272,7 +264,7 @@ class FFEncoder(nn.Module):
         self.autoencoder = AE(input_size, hidden_size, output_size).to(device)
         
         self.autoencoder_loss_function = torch.nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.autoencoder.parameters(), lr = 0.0001, weight_decay=1e-8)   
+        self.optimizer = torch.optim.Adam(self.autoencoder.parameters(), lr = 0.01)   
         self.hidden_size = hidden_size
 
 
@@ -288,13 +280,15 @@ class FFEncoder(nn.Module):
 
 
     def forward_negative(self, x_neg: torch.Tensor):
-        self.autoencoder.train()
-        reconstructed = self.autoencoder(x_neg)
-        loss = self.autoencoder_loss_function(reconstructed, x_neg)
-       
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        for _ in range(50):
+            self.autoencoder.train()
+            self.optimizer.zero_grad()
+
+            reconstructed = self.autoencoder(x_neg)
+            loss = self.autoencoder_loss_function(reconstructed, x_neg)
+
+            loss.backward()
+            self.optimizer.step()
 
         return self.fflayer.forward_negative(x_neg)
 
