@@ -70,6 +70,30 @@ class MNIST:
         return _data, y    
     
     @staticmethod
+    def negative_data_generation(a: torch.Tensor, b: torch.Tensor, blurring_steps: int = 3):
+        """
+        Create negative data that has very long correlations but very similar short range correlations. 
+        :a: an individual image from the dataset
+        :b: an individual image from the dataset
+        :blurring_steps: number of steps to apply a blurring filter on the image
+        """
+
+        mask = torch.rand((a.shape)) < 0.5
+        mask = mask.int().float()
+        filter = torch.tensor([[1/16, 1/8, 1/16], [1/8, 1/4, 1/8], [1/16, 1/8, 1/16]])
+        filter = filter.view(1, 1, 3, 3)
+        mask = mask.view(1, 1, 28, 28)
+        for step in range(blurring_steps):
+            mask = torch.nn.functional.conv2d(mask, filter, padding="same")
+
+        # threshold the image at 0.5
+        mask = mask < 0.5
+        mask = mask.int().view(28, 28)
+        reversed_mask = torch.bitwise_not(mask.bool()).int().view(28, 28)
+        neg_data = torch.mul(mask, a) + torch.mul(reversed_mask, b)
+        return neg_data
+
+    @staticmethod
     def predict(data_loader: torch.utils.data.DataLoader, model: nn.Module, device="cpu"):
         model.eval()
         predictions = []
@@ -89,19 +113,11 @@ class MNIST:
         
 
 class MergedDataset(Dataset):
-    def __init__(self, original_dataset):
+    def __init__(self, original_dataset, steps):
         self.original_dataset = original_dataset
         self.num_images = len(original_dataset)
         a = self.original_dataset[0][0][0]
-        self.mask = torch.FloatTensor(np.array([[opensimplex.noise2(i,j) for i in range(a.shape[0])] for j in range(a.shape[1])])>0).reshape(-1)
-
-    def merge_two_images(self, a: torch.Tensor, b: torch.Tensor):
-        _a = a.clone()
-        _a = _a.reshape(-1)
-        _b = b.clone()
-        _b = _b.reshape(-1)
-        _res = ((_a*self.mask) + (_b* (self.mask==0)))/2
-        return _res.reshape(_a.shape)
+        self.steps = steps
 
     def __getitem__(self, index):
         # Randomly select two images from the original dataset
@@ -111,7 +127,7 @@ class MergedDataset(Dataset):
         img2, _ = self.original_dataset[index2]
 
 
-        return self.merge_two_images(img1[0], img2[0])
+        return MNIST.negative_data_generation(img1[0], img2[0], self.steps)
 
     def __len__(self):
         # Return the number of pairs we can make from the original dataset
