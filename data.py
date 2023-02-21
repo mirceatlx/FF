@@ -48,6 +48,31 @@ class MNIST:
         overlay[range(_data.shape[0]), y] = x.max()
         _data[:, :10] = overlay 
         return _data, y
+
+    @staticmethod
+    def negative_data_generation(a: torch.Tensor, b: torch.Tensor, blurring_steps: int = 3):
+        """
+        Create negative data that has very long correlations but very similar short range correlations. 
+        :a: an individual image from the dataset
+        :b: an individual image from the dataset
+        :blurring_steps: number of steps to apply a blurring filter on the image
+        """
+
+        mask = torch.rand((a.shape)) < 0.5
+        mask = mask.int().float()
+        filter = torch.tensor([[1/16, 1/8, 1/16], [1/8, 1/4, 1/8], [1/16, 1/8, 1/16]])
+        filter = filter.view(1, 1, 3, 3)
+        mask = mask.view(1, 1, 32, 32)
+        for step in range(blurring_steps):
+            mask = torch.nn.functional.conv2d(mask, filter, padding="same")
+
+        # threshold the image at 0.5
+        mask = mask < 0.5
+        mask = mask.int().view(32, 32)
+        reversed_mask = torch.bitwise_not(mask.bool()).int().view(32, 32)
+        neg_data = torch.mul(mask, a) + torch.mul(reversed_mask, b)
+        return neg_data
+
     
     @staticmethod
     def predict(data_loader: torch.utils.data.DataLoader, model: nn.Module, device="cpu"):
