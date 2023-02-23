@@ -8,7 +8,6 @@ from ff import FF, FFLayer, FFEncoder
 from data import MNIST, MergedDataset
 from tqdm import tqdm
 
-# device = "mps" if torch.backends.mps.is_available() else "cpu"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -29,7 +28,7 @@ train_loader_negative = torch.utils.data.DataLoader(MergedDataset(torchvision.da
                                torchvision.transforms.ToTensor(),
                                torchvision.transforms.Normalize(
                                  (0.1307,), (0.3081,))
-                             ]))), batch_size=batch_size_train, shuffle=True)
+                             ])), 5), batch_size=batch_size_train, shuffle=True)
 
 
 test_loader = torch.utils.data.DataLoader(
@@ -116,10 +115,11 @@ for i in tqdm(range(epochs)):
     #wandb.log({"Accuracy on train data": acc})
     test_accs.append(acc)
     model.train()
-    for _, (x, y) in enumerate(train_loader):
-        x_pos, _ = MNIST.overlay_y_on_x(x, y)
-        x_neg, _ = MNIST.overlay_y_on_x(x, get_negative_y(y))
-        x_pos, x_neg = x_pos.to(device), x_neg.to(device)
+    for a, b in zip(enumerate(train_loader), enumerate(train_loader_negative)):
+        x_pos = a[1][0].to(device)
+        y = a[1][1].to(device)
+        x_pos,_ = MNIST.overlay_y_on_x(x_pos, y)
+        x_neg,_ = MNIST.overlay_y_on_x(b[1].to(device), y)
         if hour % (awake_period + sleep_period) < awake_period:
             model.forward_positive(x_pos)
         else:
@@ -131,6 +131,6 @@ for i in tqdm(range(epochs)):
 train_accs = np.array(train_accs)
 test_accs = np.array(test_accs)       
 
-np.save(f"normal-fixed_negative_data-{awake_period}-awake-{sleep_period}-sleep-train", train_accs)
-np.save(f"normal-fixed_negative_data-{awake_period}-awake-{sleep_period}-sleep-test", test_accs)
+np.save(f"normal-mask_negative_data-{awake_period}-awake-{sleep_period}-sleep-train", train_accs)
+np.save(f"normal-mask_negative_data-{awake_period}-awake-{sleep_period}-sleep-test", test_accs)
 #wandb.finish()
