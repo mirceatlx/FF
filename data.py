@@ -177,7 +177,7 @@ class FashionMNIST:
         for i, (x, y) in enumerate(data_loader):
             goodness = []
             for num in range(10):
-                over_x = MNIST.overlay_y_on_x(x, num)
+                over_x = FashionMNIST.overlay_y_on_x(x, num)
                 over_x = over_x[0].to(device)
                 good = model(over_x)
                 goodness.append(good.detach().cpu().numpy())
