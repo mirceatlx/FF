@@ -14,7 +14,7 @@ class FFLayer(nn.Module):
     def __init__(self, layer: nn.Module, threshold: float=2.0, epochs: int=50, 
                  optimizer: torch.optim = torch.optim.Adam, activation: nn.Module = nn.ReLU(),
                  optim_config: dict = None, positive_optim_config: dict = None, negative_optim_config: dict = None,
-                 logging=False, name="layer", device="cpu", goodness_function=lambda x: x.pow(2).mean(1)):
+                name="layer", device="cpu", goodness_function=lambda x: x.pow(2).mean(1)):
         """
         layer: the layer to be wrapped
         threshold: the threshold for the goodness of the data
@@ -29,7 +29,6 @@ class FFLayer(nn.Module):
         self.optim = optimizer(self.parameters(), **optim_config)
         self.optim_pos = optimizer(self.parameters(), **(positive_optim_config if positive_optim_config is not None else optim_config))
         self.optim_neg = optimizer(self.parameters(), **(negative_optim_config if negative_optim_config is not None else optim_config))
-        self.logging = logging
         self.name = name
         self.device = device
         self.goodness_function = goodness_function
@@ -59,8 +58,6 @@ class FFLayer(nn.Module):
             self.optim_pos.step()
         with torch.no_grad():
             h_pos = self.call(x_pos)
-        if self.logging:
-            wandb.log({f"positive data loss on {self.name}": np.mean(losses)})
         return h_pos, np.mean(losses)
 
     def forward_negative(self, x_neg: torch.Tensor):
@@ -77,8 +74,6 @@ class FFLayer(nn.Module):
             self.optim_neg.step()
         with torch.no_grad():
             h_neg = self.call(x_neg)
-        if self.logging:
-            wandb.log({f"negative data loss on {self.name}": np.mean(losses)})
         return h_neg, np.mean(losses)
 
     def forward(self, x_pos: torch.Tensor, x_neg: torch.Tensor = None):
@@ -99,8 +94,6 @@ class FFLayer(nn.Module):
         with torch.no_grad():
             h_pos = self.call(x_pos)
             h_neg = self.call(x_neg)
-        if self.logging:
-            wandb.log({f"loss on {self.name}": np.mean(losses)})
         return h_pos, h_neg, np.mean(losses)
 
 
@@ -108,11 +101,10 @@ class FF(nn.Module):
     """
     The Forward-Forward algorithm.
     """
-    def __init__(self, logging=False, device="cpu"):
+    def __init__(self, device="cpu"):
 
         super(FF, self).__init__()
         self.num_layers = 0
-        self.logging = logging
         self.layers = []
         self.device = device
     
@@ -154,8 +146,6 @@ class FF(nn.Module):
         for _, layer in enumerate(self.layers):
             x_pos, x_neg, loss = layer(x_pos, x_neg)
             losses.append(loss)
-        if self.logging:
-            wandb.log({"overall loss": np.mean(losses)})
         return np.mean(losses)
 
     """
