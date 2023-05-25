@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-import wandb
 
 # reference: https://keras.io/examples/vision/forwardforward/
 class FFLayer(nn.Module):
