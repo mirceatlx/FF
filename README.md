@@ -1,6 +1,4 @@
-# FF
-Forward-Forward Algorithm
-
+# Sleep Deprivation in the Forward Forward Algorithm
 
 
 
