@@ -37,9 +37,3 @@ The phase size of the positive data ranges from 1 to 16, and the negative phase 
 | MNIST | Masks | 96% | 88% | 78% | 75% | 73% | 10% |
 | Fashion-MNIST | Wrong label | 88.7% | 73% | 56% | 47% | 14% | 10% |
 | Fashion-MNIST | Masks | 84% | 56% | 55% | 54% | 52% | 49% |
-
-## Resources
-
-Overleaf: https://www.overleaf.com/8363593984zhnrfwtjyvjk
-
-Reference template: https://www.overleaf.com/read/pfqxbfpxfbpt
