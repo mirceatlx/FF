@@ -1,7 +1,6 @@
 # Sleep Deprivation in the Forward Forward Algorithm
 
 
-
 ## Resources
 
 Overleaf: https://www.overleaf.com/8363593984zhnrfwtjyvjk
