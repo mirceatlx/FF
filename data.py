@@ -65,7 +65,7 @@ class FMNISTInMemory(Dataset):
                                                       transform=torchvision.transforms.Compose([
                                                         torchvision.transforms.ToTensor(),
                                                         torchvision.transforms.Normalize(
-                                                          (0.1307,), (0.3081,))
+                                                          (0.28582752,), (0.35303804,))
                                                       ]))
         self.data = []
         for img, target in self.fmnist_data:
